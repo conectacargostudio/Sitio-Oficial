@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConectaCargo Studio - Tu carga en destino</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Paleta de colores basada en la imagen */
+        :root {
+            --bg-blue: #0d1b2a;
+            --bg-blue-light: #1b263b;
+            --accent-orange: #f58634;
+            --accent-orange-hover: #e0762b;
+            --accent-green: #3ea03a;
+            --accent-lightblue: #007bb5;
+            --text-light: #f8fafc;
+            --text-muted: #cbd5e1;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-blue);
+            color: var(--text-light);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+            top: 0px !important; /* Evita que Google Translate baje la página */
+        }
+
+        /* Ocultar elementos de Google Translate */
+        .goog-te-banner-frame.skiptranslate { display: none !important; }
+        #google_translate_element { display: none !important; }
+        .goog-tooltip { display: none !important; }
+        .goog-tooltip:hover { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+
+        /* Fondo de estrellas */
+        #stars-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: -1; overflow: hidden;
+        }
+        .star {
+            position: absolute; background: white; border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+            animation: fall linear infinite;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-10vh); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(100vh); opacity: 0; }
+        }
+
+        /* Navegación */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 5%; background-color: rgba(13, 27, 42, 0.95);
+            position: sticky; top: 0; z-index: 1000;
+            border-bottom: 2px solid var(--accent-orange);
+        }
+
+        .logo { font-size: 24px; font-weight: bold; color: var(--text-light); text-decoration: none; }
+        .logo span { color: var(--accent-orange); }
+
+        nav ul { display: flex; list-style: none; gap: 20px; align-items: center; }
+        nav a { color: var(--text-light); text-decoration: none; font-size: 14px; font-weight: bold; transition: 0.3s; }
+        nav a:hover { color: var(--accent-orange); }
+
+        .btn-orange {
+            background-color: var(--accent-orange); color: white;
+            padding: 10px 20px; border: none; border-radius: 4px;
+            font-weight: bold; cursor: pointer; text-decoration: none; transition: 0.3s;
+            display: inline-block; text-align: center;
+        }
+        .btn-orange:hover { background-color: var(--accent-orange-hover); }
+
+        /* Unidades de Negocio (Flip Cards) */
+        .unidades-section { padding: 60px 5%; background: linear-gradient(to bottom, var(--bg-blue), var(--bg-blue-light)); }
+        .section-title {
+            text-align: center; font-size: 2.5rem; margin-bottom: 40px;
+            color: var(--accent-orange); text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .flip-card { background-color: transparent; height: 280px; perspective: 1000px; cursor: pointer; }
+        .flip-card-inner {
+            position: relative; width: 100%; height: 100%; text-align: center;
+            transition: transform 0.6s; transform-style: preserve-3d;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .flip-card:hover .flip-card-inner { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            border-radius: 8px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .flip-card-front { background-size: cover; background-position: center; color: white; }
+        .flip-card-front::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 27, 42, 0.7); border-radius: 8px;
+        }
+        .flip-card-front h3, .flip-card-front i { position: relative; z-index: 1; }
+        .flip-card-front i { font-size: 50px; color: var(--accent-orange); margin-bottom: 15px; }
+        .flip-card-back { background-color: var(--accent-orange); color: white; transform: rotateY(180deg); }
+
+        /* Hero Section */
+        .hero {
+            display: flex; flex-wrap: wrap; padding: 80px 5%; gap: 40px; align-items: center;
+            background: linear-gradient(rgba(13, 27, 42, 0.8), rgba(13, 27, 42, 0.9)), url('https://images.unsplash.com/photo-1578575437130-527eed3abbec?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+        }
+        .hero-text { flex: 1; min-width: 300px; }
+        .hero-text h1 { font-size: 3.5rem; margin-bottom: 20px; line-height: 1.1; }
+        .hero-text p { color: var(--text-muted); font-size: 1.2rem; margin-bottom: 30px; }
+        
+        .quote-box {
+            flex: 1; min-width: 300px; background: rgba(27, 38, 59, 0.95);
+            padding: 30px; border-radius: 8px; border-top: 4px solid var(--accent-lightblue);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .quote-box h3 { margin-bottom: 20px; color: var(--text-light); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 14px; }
+        .form-group label span { color: var(--danger); }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px; border-radius: 4px;
+            border: 1px solid #415a77; background: #0d1b2a; color: white;
+        }
+
+        /* Secciones Generales */
+        section { padding: 60px 5%; }
+        .about-text { max-width: 900px; margin: 0 auto; font-size: 1.1rem; }
+        .about-text ul { margin-left: 20px; margin-top: 15px; color: var(--text-muted); }
+        .about-text li { margin-bottom: 10px; }
+
+        /* Preguntas Frecuentes */
+        .faq-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        .faq-card { background: var(--bg-blue); padding: 25px; border-radius: 8px; border-left: 4px solid var(--accent-orange); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .faq-card h4 { color: var(--accent-orange); margin-bottom: 10px; font-size: 1.15rem; }
+        .faq-card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; }
+
+        .freelance-banner {
+            background: linear-gradient(90deg, var(--bg-blue-light) 0%, var(--bg-blue) 100%);
+            border-left: 5px solid var(--accent-green); padding: 40px;
+            text-align: center; margin: 40px 5%; border-radius: 8px;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #08111a; padding: 40px 5%; display: flex; flex-wrap: wrap;
+            gap: 40px; justify-content: space-between; border-top: 1px solid #1b263b;
+        }
+        .footer-col { flex: 1; min-width: 250px; }
+        .social-links a { color: var(--text-light); font-size: 24px; margin-right: 15px; text-decoration: none; transition: 0.3s; }
+        .social-links a:hover { color: var(--accent-orange); }
+        
+        .whatsapp-float {
+            position: fixed; bottom: 20px; right: 20px; background-color: var(--accent-green); color: white;
+            width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-size: 30px; box-shadow: 2px 2px 10px rgba(0,0,0,0.5); z-index: 100; text-decoration: none; transition: transform 0.3s;
+        }
+        .whatsapp-float:hover { transform: scale(1.1); }
+    </style>
+</head>
+<body>
+
+    <div id="stars-container"></div>
+    
+    <!-- Elemento oculto de Google Translate -->
+    <div id="google_translate_element"></div>
+
+    <header>
+        <a href="#" class="logo">ConectaCargo <span>Studio</span></a>
+        <nav>
+            <ul>
+                <li><a href="#unidades">Servicios</a></li>
+                <li><a href="#inicio">Cotizar</a></li>
+                <li><a href="#nosotros">Nosotros</a></li>
+                <li><a href="#faq">FAQ</a></li>
+                <li><a href="#contacto">Contacto</a></li>
+                <li>
+                    <!-- Selector de Idioma con estilos forzados para que se vea bien -->
+                    <select id="languageSelect" style="background:transparent; color:white; border:none; outline:none; cursor:pointer; font-weight:bold; font-size:16px;">
+                        <option value="es" style="background: var(--bg-blue); color: white;">🇪🇸 ES</option>
+                        <option value="en" style="background: var(--bg-blue); color: white;">🇺🇸 EN</option>
+                        <option value="pt" style="background: var(--bg-blue); color: white;">🇧🇷 PT</option>
+                    </select>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="unidades-section" id="unidades">
+        <h2 class="section-title">Nuestras Unidades de Negocio</h2>
+        <div class="services-grid">
+            <div class="flip-card">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front" style="background-image: url('https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80');">
+                        <i class="fa-solid fa-ship"></i><h3>Transporte Marítimo</h3>
+                    </div>
+                    <div class="flip-card-back">
+                        <h3 style="margin-bottom:15px;">Marítimo</h3>
+                        <p>Servicio FCL y LCL con cobertura global y las tarifas más competitivas del mercado.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flip-card">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front" style="background-image: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80');">
+                        <i class="fa-solid fa-plane"></i><h3>Transporte Aéreo</h3>
+                    </div>
+                    <div class="flip-card-back">
+                        <h3 style="margin-bottom:15px;">Aéreo</h3>
+                        <p>Soluciones ágiles para cargas urgentes y de alto valor. Seguridad y rapidez.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flip-card">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front" style="background-image: url('https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80');">
+                        <i class="fa-solid fa-truck"></i><h3>Transporte Terrestre</h3>
+                    </div>
+                    <div class="flip-card-back">
+                        <h3 style="margin-bottom:15px;">Terrestre</h3>
+                        <p>Conexiones nacionales e internacionales eficientes, seguras y con monitoreo constante.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flip-card">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front" style="background-image: url('https://i.ibb.co/6c2W0Q2/image-61d4f2.jpg');">
+                        <i class="fa-solid fa-boxes-stacked"></i><h3>Carga Proyecto</h3>
+                    </div>
+                    <div class="flip-card-back">
+                        <h3 style="margin-bottom:15px;">Carga Proyecto</h3>
+                        <p>Ingeniería logística y manejo especializado de cargas sobredimensionadas y pesadas.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flip-card">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front" style="background-image: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80');">
+                        <i class="fa-solid fa-file-signature"></i><h3>Despacho de Aduana</h3>
+                    </div>
+                    <div class="flip-card-back">
+                        <h3 style="margin-bottom:15px;">Aduana</h3>
+                        <p>Gestión integral de documentación, regulaciones y normativas aduaneras.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="hero" id="inicio">
+        <div class="hero-text">
+            <h4 style="color:var(--accent-lightblue); font-size:1.2rem; letter-spacing: 2px; margin-bottom:10px;">GLOBAL LOGISTICS</h4>
+            <h1>Tu carga en destino,<br><span style="color:var(--accent-orange);">tus operaciones sin demoras.</span></h1>
+            <p>Más de 15 años coordinando transporte internacional y operaciones de comercio exterior desde y hacia Argentina. Allanamientos normativos, aduaneros y logísticos para asegurar tu rentabilidad.</p>
+            <a href="https://wa.me/5491166055164?text=Hola,%20quiero%20cotizar%20un%20envío%20con%20ConectaCargo." class="btn-orange" target="_blank">
+                <i class="fa-brands fa-whatsapp"></i> COTIZAR AHORA
+            </a>
+        </div>
+        
+        <div class="quote-box" id="cotizador">
+            <h3>Solicitar Cotización</h3>
+            <form id="formCotizador">
+                <div class="form-group">
+                    <label>Nombre del cliente <span>*</span></label>
+                    <input type="text" id="nombreCliente" required placeholder="Tu Nombre">
+                </div>
+                <div class="form-group">
+                    <label>Número de teléfono <span>*</span></label>
+                    <input type="tel" id="telefonoCliente" required placeholder="Ej: +54 9 11...">
+                </div>
+                <div class="form-group">
+                    <label>Correo Gmail <span>*</span></label>
+                    <input type="email" id="emailCliente" required placeholder="tu-correo@gmail.com">
+                </div>
+                <div class="form-group">
+                    <label>Origen <span>*</span></label>
+                    <input type="text" id="origen" required placeholder="Ej: Buenos Aires, ARG">
+                </div>
+                <div class="form-group">
+                    <label>Destino <span>*</span></label>
+                    <input type="text" id="destino" required placeholder="Ej: Miami, USA">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Peso (kg) <span>*</span></label>
+                        <input type="number" id="peso" required placeholder="0">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>CBM (Vol. m³) <span>*</span></label>
+                        <input type="number" step="0.01" id="cbm" required placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Mercadería <span>*</span></label>
+                    <input type="text" id="mercaderia" required placeholder="Descripción de la carga">
+                </div>
+                <div class="form-group">
+                    <label>¿Es carga general o IMO? <span>*</span></label>
+                    <select id="tipoCarga" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Carga General">Carga General</option>
+                        <option value="Carga IMO (Peligrosa)">Carga IMO (Peligrosa)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Incoterm <span>*</span></label>
+                    <select id="incoterm" required>
+                        <option value="">Seleccione...</option>
+                        <option value="FOB">FOB</option>
+                        <option value="CIF">CIF</option>
+                        <option value="EXW">EXW</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <button type="submit" id="btnSumbitCotizador" class="btn-orange" style="width: 100%; margin-top:10px;">Solicitar Tarifa</button>
+            </form>
+        </div>
+    </section>
+
+    <section id="nosotros" style="background-color: var(--bg-blue-light);">
+        <h2 class="section-title">Conectando fronteras con visión estratégica</h2>
+        <div class="about-text">
+            <p style="text-align:center;">Acompañamos tanto a emprendedores en sus primeros embarques como a empresas consolidadas que exigen volumen, trazabilidad y cumplimiento.</p>
+            <br>
+            <h4 style="color: var(--accent-orange); font-size:1.5rem; margin-bottom:15px;">¿Por qué elegirnos?</h4>
+            <ul>
+                <li><strong style="color:var(--text-light);">Red operativa global:</strong> Cobertura integral en fletes marítimos, aéreos y terrestres.</li>
+                <li><strong style="color:var(--text-light);">Gestión sin demoras:</strong> Resolvemos aduana, normativas y documentación para allanar el camino de tu carga.</li>
+                <li><strong style="color:var(--text-light);">Eficiencia de costos:</strong> Negociamos tarifas competitivas orientadas a maximizar la rentabilidad.</li>
+                <li><strong style="color:var(--text-light);">Proximidad real:</strong> Asesoramiento directo, comunicación transparente y seguimiento personalizado en todo momento.</li>
+            </ul>
+            <br>
+            <p style="text-align:center; font-size:1.4rem; font-weight:bold; color:var(--accent-lightblue); margin-top:20px;">Donde otros ven límites, en ConectaCargo trazamos el camino.</p>
+        </div>
+    </section>
+
+    <section>
+        <div style="display:flex; flex-wrap:wrap; gap:40px;">
+            <div style="flex:1; min-width:300px; background:var(--bg-blue-light); padding:30px; border-radius:8px; border-left:4px solid var(--accent-orange);">
+                <h3 style="color:var(--accent-orange); margin-bottom:15px; font-size:1.8rem;">Warehousing</h3>
+                <ul style="color:var(--text-muted); line-height:2; margin-left:20px;">
+                    <li>Consolidación y desconsolidación de contenedores dry & reefers.</li>
+                    <li>Consolidación y desconsolidación de camiones internacionales.</li>
+                    <li>Coordinación eficiente con depósitos fiscales y zonas francas.</li>
+                    <li>Traslados desde y hacia depósitos fiscales de zona franca.</li>
+                </ul>
+            </div>
+            <div style="flex:1; min-width:300px; background:var(--bg-blue-light); padding:30px; border-radius:8px; border-left:4px solid var(--accent-lightblue);">
+                <h3 style="color:var(--accent-lightblue); margin-bottom:15px; font-size:1.8rem;">Courier Exporta Simple</h3>
+                <p style="color:var(--text-muted); margin-bottom:10px;">Exportación puerta a puerta ágil, seguro y eficiente.</p>
+                <ul style="color:var(--text-muted); line-height:2; margin-left:20px;">
+                    <li><strong style="color:white;">Standard:</strong> Optimiza costos, 4 a 8 días hábiles.</li>
+                    <li><strong style="color:white;">Priority:</strong> Tiempo de tránsito más ágil para urgencias o documentos.</li>
+                    <li><strong style="color:white;">Carga sin límites:</strong> Para cargas excluidas del régimen courier por peso o valor.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <div class="freelance-banner">
+        <h2 style="color:var(--accent-green); margin-bottom:15px; font-size:2rem;">Trabajo Freelance / OutSourcing</h2>
+        <p style="margin-bottom:20px; font-size:1.1rem;">Brindamos asistencia y gestión en áreas operativas, dando soporte en trabajos freelance y proyectos puntuales para empresas de Argentina y el exterior.</p>
+        <p style="font-weight:bold; color:#fff; font-size:1.2rem; margin-bottom:25px;">
+            <i class="fa-solid fa-check" style="color:var(--accent-green);"></i> Revisión de documentos de comercio exterior (BL, AWB, INVOICE, PACKING LIST)
+        </p>
+        <a href="https://wa.me/5491166055164" class="btn-orange" style="background:var(--accent-green);" target="_blank">Solicitar Asistencia Operativa</a>
+    </div>
+
+    <!-- PREGUNTAS FRECUENTES REUBICADAS AQUÍ -->
+    <section id="faq" style="background-color: var(--bg-blue-light); border-top: 1px solid #1b263b;">
+        <h2 class="section-title">Preguntas Frecuentes</h2>
+        <div class="faq-container">
+            <div class="faq-card">
+                <h4>1. ¿Qué datos necesito tener a mano para solicitar una cotización de envío?</h4>
+                <p>Para darte la tarifa más precisa y competitiva, requerimos saber: el tipo de mercadería, el origen y destino exactos, el peso total en kilogramos, el volumen (CBM o medidas de las cajas/pallets) y el Incoterm bajo el cual realizas la operación (por ejemplo, FOB, CIF, EXW).</p>
+            </div>
+            <div class="faq-card">
+                <h4>2. ¿Cuál es la diferencia entre carga general y carga IMO, y cómo afecta mi cotización?</h4>
+                <p>La carga general abarca productos estándar que no representan riesgos, mientras que la carga IMO corresponde a mercancías peligrosas (químicos, inflamables, baterías, etc.) que exigen permisos y embalajes especiales. Declarar el tipo correcto desde el inicio evita demoras operativas y variaciones en el costo logístico final.</p>
+            </div>
+            <div class="faq-card">
+                <h4>3. ¿Qué vía de transporte (marítimo, aéreo o terrestre) es la más conveniente para mi negocio?</h4>
+                <p>Depende de tu urgencia y presupuesto. El transporte marítimo (FCL/LCL) es ideal para grandes volúmenes y máxima eficiencia de costos. El transporte aéreo se recomienda para cargas urgentes, perecederas o de alto valor que requieren rapidez. El transporte terrestre une conexiones regionales de manera flexible y con monitoreo constante.</p>
+            </div>
+            <div class="faq-card">
+                <h4>4. ¿Ustedes se encargan también de la gestión de aduana y de los documentos de comercio exterior?</h4>
+                <p>Sí, ofrecemos una gestión integral de despacho de aduana. Nos ocupamos de la revisión y tramitación de documentos esenciales como el BL, AWB, factura comercial (Invoice) y lista de empaque (Packing List) para asegurar que tu carga avance sin trabas normativas.</p>
+            </div>
+            <div class="faq-card">
+                <h4>5. Si soy un emprendedor o una empresa pequeña haciendo mi primer embarque, ¿puedo cotizar con ustedes?</h4>
+                <p>¡Por supuesto! Acompañamos tanto a emprendedores en sus primeros pasos en comercio exterior como a empresas consolidadas que manejan grandes volúmenes logísticos. Te brindamos asesoramiento directo y personalizado para allanar el camino y cuidar la rentabilidad de tu operación.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer id="contacto">
+        <div class="footer-col">
+            <h3 style="color:var(--accent-orange); margin-bottom:20px;">ConectaCargo Studio</h3>
+            <p style="color:var(--text-muted); margin-bottom:20px;">Tu socio estratégico en logística internacional y comercio exterior.</p>
+            <div class="social-links">
+                <a href="https://www.instagram.com/log_eugeniaalderete/" title="Instagram" target="_blank"><i class="fa-brands fa-instagram"></i></a> 
+                <a href="https://www.youtube.com/@ConectaCargoStudio" title="YouTube" target="_blank"><i class="fa-brands fa-youtube"></i></a> 
+            </div>
+        </div>
+        
+        <div class="footer-col">
+            <h3 style="color:var(--accent-orange); margin-bottom:20px;">Enlaces de Contacto</h3>
+            <ul style="list-style:none; line-height:2.5; color:var(--text-muted);">
+                <li><i class="fa-solid fa-phone" style="color:var(--accent-orange); width:25px;"></i> +54 9 11 6605-5164</li>
+                <li><i class="fa-brands fa-whatsapp" style="color:var(--accent-green); width:25px;"></i> <a href="https://whatsapp.com/channel/0029Vb8vExL4SpkKyqLUZe0b" style="color:var(--text-muted); text-decoration:none;" target="_blank">Canal Bolsa de Trabajo</a></li>
+                <li><i class="fa-solid fa-envelope" style="color:var(--accent-lightblue); width:25px;"></i> info@conectacargo.com</li>
+            </ul>
+        </div>
+
+        <div class="footer-col">
+            <h3 style="color:var(--accent-orange); margin-bottom:20px;">Consultas Generales</h3>
+            <form id="formContacto">
+                <div class="form-group">
+                    <input type="text" id="nombreContacto" required placeholder="Tu Nombre">
+                </div>
+                <div class="form-group">
+                    <input type="email" id="emailContacto" required placeholder="Tu Email">
+                </div>
+                <div class="form-group">
+                    <textarea id="mensajeContacto" required placeholder="Tu Mensaje" rows="3"></textarea>
+                </div>
+                <button type="submit" id="btnSumbitContacto" class="btn-orange" style="width:100%;">Enviar Mensaje</button>
+            </form>
+        </div>
+    </footer>
+
+    <a href="https://wa.me/5491166055164?text=Hola,%20quisiera%20recibir%20más%20información%20sobre%20los%20servicios%20de%20ConectaCargo." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+
+    <!-- SCRIPT PARA GOOGLE TRANSLATE -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'es',
+                includedLanguages: 'es,en,pt',
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script>
+        // Lógica de traducción personalizada
+        document.getElementById('languageSelect').addEventListener('change', function() {
+            var language = this.value;
+            var selectField = document.querySelector(".goog-te-combo");
+            if (selectField) {
+                selectField.value = language;
+                selectField.dispatchEvent(new Event('change'));
+            }
+        });
+
+        const starsContainer = document.getElementById('stars-container');
+        function createStar() {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            const size = Math.random() * 3 + 1;
+            star.style.width = size + 'px'; star.style.height = size + 'px';
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.animationDuration = Math.random() * 5 + 3 + 's';
+            star.style.opacity = Math.random();
+            starsContainer.appendChild(star);
+            setTimeout(() => { star.remove(); }, 8000);
+        }
+        setInterval(createStar, 150);
+
+        const correoDestino = atob("TG9nLWV1Z2VuaWEuYWxkZXJldGVAb3V0bG9vay5jb20="); 
+        const numeroWhatsApp = "5491166055164"; 
+
+        document.getElementById('formCotizador').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            const btn = document.getElementById('btnSumbitCotizador');
+            btn.innerHTML = 'Enviando... <i class="fa-solid fa-spinner fa-spin"></i>';
+
+            const nombreCliente = document.getElementById('nombreCliente').value;
+            const telefonoCliente = document.getElementById('telefonoCliente').value;
+            const emailCliente = document.getElementById('emailCliente').value;
+            const origen = document.getElementById('origen').value;
+            const destino = document.getElementById('destino').value;
+            const peso = document.getElementById('peso').value;
+            const cbm = document.getElementById('cbm').value;
+            const mercaderia = document.getElementById('mercaderia').value;
+            const tipoCarga = document.getElementById('tipoCarga').value;
+            const incoterm = document.getElementById('incoterm').value;
+
+            const textoWhatsApp = `Hola ConectaCargo, solicito una cotización web:%0A%0A` +
+                                  `👤 *Cliente:* ${nombreCliente}%0A` +
+                                  `📞 *Teléfono:* ${telefonoCliente}%0A` +
+                                  `📧 *Email:* ${emailCliente}%0A` +
+                                  `📍 *Origen:* ${origen}%0A` +
+                                  `📍 *Destino:* ${destino}%0A` +
+                                  `⚖️ *Peso:* ${peso} kg%0A` +
+                                  `📦 *Volumen:* ${cbm} CBM%0A` +
+                                  `📝 *Mercadería:* ${mercaderia}%0A` +
+                                  `⚠️ *Tipo:* ${tipoCarga}%0A` +
+                                  `🤝 *Incoterm:* ${incoterm}`;
+            
+            const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${textoWhatsApp}`;
+
+            fetch(`https://formsubmit.co/ajax/${correoDestino}`, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    _subject: "NUEVA SOLICITUD DE COTIZACIÓN WEB",
+                    Cliente: nombreCliente,
+                    Telefono: telefonoCliente,
+                    Email: emailCliente,
+                    Origen: origen, 
+                    Destino: destino,
+                    Peso_kg: peso, 
+                    Volumen_CBM: cbm,
+                    Mercaderia: mercaderia, 
+                    Tipo: tipoCarga,
+                    Incoterm: incoterm
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.fire({
+                    title: '¡Cotización en proceso!',
+                    text: 'Te redirigiremos a WhatsApp para confirmar los detalles.',
+                    icon: 'success',
+                    confirmButtonColor: '#f58634'
+                }).then(() => {
+                    window.open(urlWhatsApp, '_blank');
+                    document.getElementById('formCotizador').reset();
+                    btn.innerHTML = 'Solicitar Tarifa';
+                });
+            })
+            .catch(error => {
+                window.open(urlWhatsApp, '_blank');
+                btn.innerHTML = 'Solicitar Tarifa';
+            });
+        });
+
+        document.getElementById('formContacto').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSumbitContacto');
+            btn.innerHTML = 'Enviando...';
+
+            const nombre = document.getElementById('nombreContacto').value;
+            const email = document.getElementById('emailContacto').value;
+            const mensaje = document.getElementById('mensajeContacto').value;
+
+            const textoWhatsApp = `Hola ConectaCargo, mi nombre es ${nombre} (${email}).%0A%0A*Consulta:* ${mensaje}`;
+            const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${textoWhatsApp}`;
+
+            fetch(`https://formsubmit.co/ajax/${correoDestino}`, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    _subject: "NUEVO MENSAJE DESDE LA WEB",
+                    Nombre: nombre,
+                    Email: email,
+                    Mensaje: mensaje
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.fire({
+                    title: '¡Mensaje procesado!',
+                    text: 'Te redirigiremos a WhatsApp.',
+                    icon: 'success',
+                    confirmButtonColor: '#f58634'
+                }).then(() => {
+                    window.open(urlWhatsApp, '_blank');
+                    document.getElementById('formContacto').reset();
+                    btn.innerHTML = 'Enviar Mensaje';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
